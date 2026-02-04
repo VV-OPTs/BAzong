@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>反霸总套路小游戏</title>
+    <style>
+        * {margin: 0;padding: 0;box-sizing: border-box;font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;}
+        body {background-color: #2c3e50;color: #2c3e50;line-height: 1.6;min-height: 100vh;
+            padding: 10px;}
+        .container {max-width: 900px;margin: 0 auto;background-color: #fff;
+            border-radius: 10px;overflow: hidden;box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);}
+        .header {background-color: #e74c3c;color: white;text-align: center;
+            padding: 20px;font-size: 1.8rem;font-weight: bold;}
+        .game-area {display: flex;flex-direction: column;height: 700px;}
+        .story-container {flex: 1;padding: 20px;overflow-y: auto;background-color: #ecf0f1;
+            border-bottom: 2px solid #bdc3c7;}
+        .story-text {font-size: 1.1rem;line-height: 1.8;min-height: 300px;white-space: pre-wrap;}
+        .story-line {margin-bottom: 10px;}
+        .story-line:last-child {margin-bottom: 0;}
+        .story-line.empty {height: 10px;}
+        .choices-container {padding: 20px;background-color: #fff;}
+        .choice-button {display: block;width: 100%;margin: 8px 0;padding: 15px;
+            background-color: #3498db;color: white;border: none;border-radius: 8px;
+            font-size: 1rem;font-weight: bold;text-align: left;cursor: pointer;transition: all 0.2s;}
+        .choice-button:hover {background-color: #2980b9;transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);}
+        .choice-button:active {transform: translateY(0);}
+        .input-container {padding: 15px 20px;background-color: #f8f9fa;border-top: 1px solid #dee2e6;
+            display: none;}
+        .input-group {display: flex;gap: 10px;}
+        .name-input {flex: 1;padding: 12px;border: 2px solid #3498db;border-radius: 6px;
+            font-size: 1rem;}
+        .submit-button {padding: 12px 25px;background-color: #2ecc71;color: white;
+            border: none;border-radius: 6px;font-size: 1rem;font-weight: bold;cursor: pointer;
+            transition: background-color 0.2s;}
+        .submit-button:hover {background-color: #27ae60;}
+        .status-bar {background-color: #34495e;color: #ecf0f1;padding: 12px 20px;
+            display: flex;justify-content: space-between;align-items: center;}
+        .status-text {font-size: 0.95rem;}
+        .save-buttons {display: flex;gap: 8px;}
+        .save-btn, .load-btn, .manager-btn {padding: 8px 15px;color: white;border: none;
+            border-radius: 4px;font-size: 0.9rem;font-weight: bold;cursor: pointer;
+            transition: all 0.2s;}
+        .save-btn {background-color: #8e44ad;}
+        .save-btn:hover {background-color: #7d3c98;}
+        .load-btn {background-color: #16a085;}
+        .load-btn:hover {background-color: #138d75;}
+        .manager-btn {background-color: #27ae60;}
+        .manager-btn:hover {background-color: #229954;}
+
+        /* 存档管理模态框 */
+        .modal {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);z-index: 1000;justify-content: center;
+            align-items: center;}
+        .modal-content {background-color: white;width: 90%;max-width: 650px;
+            border-radius: 10px;overflow: hidden;box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);}
+        .modal-header {background-color: #e74c3c;color: white;padding: 20px;text-align: center;
+            font-size: 1.5rem;font-weight: bold;}
+        .modal-body {padding: 20px;max-height: 60vh;overflow-y: auto;}
+        .modal-footer {padding: 15px 20px;background-color: #f8f9fa;display: flex;
+            justify-content: space-between;}
+        .slot-item {display: flex;align-items: center;padding: 15px;margin-bottom: 10px;
+            background-color: #f2f3f4;border-radius: 8px;border: 1px solid #dee2e6;}
+        .slot-info {flex: 1;margin: 0 15px;}
+        .slot-title {font-weight: bold;color: #2c3e50;}
+        .slot-details {font-size: 0.9rem;color: #7f8c8d;margin-top: 5px;}
+        .slot-actions {display: flex;gap: 8px;}
+        .slot-btn {padding: 6px 12px;border: none;border-radius: 4px;font-size: 0.85rem;
+            cursor: pointer;color: white;}
+        .slot-save {background-color: #27ae60;}
+        .slot-load {background-color: #f39c12;}
+        .slot-delete {background-color: #e74c3c;}
+        .ending-list {padding: 20px;line-height: 1.8;}
+        .ending-item {margin-bottom: 10px;padding-left: 10px;border-left: 4px solid #3498db;}
+        .typing-cursor {display: inline-block;width: 8px;height: 1.2em;background-color: #3498db;
+            margin-left: 2px;animation: blink 1s infinite;vertical-align: middle;}
+        @keyframes blink {0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }}
+        @media (max-width: 768px) {.game-area {height: 600px;}
+            .header {font-size: 1.4rem;padding: 15px;}
+            .status-bar {flex-direction: column;gap: 10px;}
+            .save-buttons {width: 100%;justify-content: center;}
+            .slot-item {flex-direction: column;align-items: flex-start;}
+            .slot-actions {margin-top: 10px;width: 100%;justify-content: space-between;}}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">反霸总套路小游戏</div>
+        <div class="game-area">
+            <div class="story-container">
+                <div id="story-text" class="story-text"></div>
+            </div>
+            <div id="input-container" class="input-container">
+                <div class="input-group">
+                    <input type="text" id="name-input" class="name-input" placeholder="请输入你的整活名">
+                    <button id="submit-name" class="submit-button">开始冒险</button>
+                </div>
+            </div>
+            <div id="choices-container" class="choices-container">
+                <!-- 选项按钮会动态生成在这里 -->
+            </div>
+            <div class="status-bar">
+                <div id="status-text" class="status-text">游戏加载中...</div>
+                <div class="save-buttons">
+                    <button id="quick-save" class="save-btn">快速存档</button>
+                    <button id="quick-load" class="load-btn">快速读档</button>
+                    <button id="save-manager" class="manager-btn">存档管理</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 存档管理模态框 -->
+    <div id="save-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">存档管理</div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; color: #7f8c8d;">每个存档位显示状态，点击"读取该存档"可直接加载</p>
+                <div id="slots-container">
+                    <!-- 存档位会动态生成在这里 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-quick-save" class="save-btn">快速存档</button>
+                <button id="modal-quick-load" class="load-btn">快速读档</button>
+                <button id="close-modal" class="manager-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 结局收集模态框 -->
+    <div id="endings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">已解锁结局</div>
+            <div class="modal-body">
+                <div class="ending-list" id="endings-list">
+                    <!-- 结局列表会动态生成在这里 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="close-endings-modal" class="manager-btn">返回游戏</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 游戏主类
+        class AntiCEOGame {
+            constructor() {this.playerName = "莉莉";this.currentSceneId = "start";
+                this.scenes = this.loadScenes();this.saveSlots = 5;this.nextSaveSlot = 1;
+                this.unlockedEndings = new Set();this.isTyping = false;
+                this.typewriterSpeed = 20; // 打字速度（毫秒）
+                
+                // 初始化UI元素
+                this.storyText = document.getElementById('story-text');
+                this.choicesContainer = document.getElementById('choices-container');
+                this.inputContainer = document.getElementById('input-container');
+                this.nameInput = document.getElementById('name-input');
+                this.submitNameBtn = document.getElementById('submit-name');
+                this.statusText = document.getElementById('status-text');
+                
+                // 绑定事件
+                this.submitNameBtn.addEventListener('click', () => this.submitName());
+                this.nameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.submitName();});
+                
+                // 存档相关按钮
+                document.getElementById('quick-save').addEventListener('click', () => this.quickSave());
+                document.getElementById('quick-load').addEventListener('click', () => this.quickLoad());
+                document.getElementById('save-manager').addEventListener('click', () => this.showSaveManager());
+                
+                // 模态框相关
+                document.getElementById('close-modal').addEventListener('click', () => this.closeSaveManager());
+                document.getElementById('modal-quick-save').addEventListener('click', () => {
+                    this.quickSave();
+                    this.refreshSlotDisplay();});
+                document.getElementById('modal-quick-load').addEventListener('click', () => {
+                    this.quickLoad();
+                    this.closeSaveManager();});
+                document.getElementById('close-endings-modal').addEventListener('click', () => this.closeEndingsModal());
+                
+                // 加载游戏
+                this.displayScene(this.currentSceneId);}
+            
+            // 加载所有游戏场景
+            loadScenes() {
+                return {
+                    "start": {
+                        "text": "\n\n欢迎来到反霸总套路小游戏！\n\n\n一切以放弃大脑运转为基础，是全程0人工的放弃思考产物。\n据某不愿透露姓名的家伙反馈：一个人玩可能有点尬，两个人吐槽着玩比较像吃菌子。\n总之老大们谨慎食用，有需要的可以直接避雷退出。\n\n事已至此，请写下你的整活名：",
+                        "input_required": true,
+                        "next_scene_after_input": "chapter1"},
+                    "chapter1": {
+                        "text": "\n第一章：八百米大床惊魂记\n\n清晨的第一缕阳光透过珍珠窗帘的缝隙，轻柔地抚过你的眼皮。\n你慵懒地翻了个身，身下的触感柔软得仿佛坠入云端。\n等等...这个翻身动作已经持续了三十秒，床还没到边？！\n\n你猛地睁开眼，映入眼帘的是------\n一张大到离谱的豪华大床，丝绸床单在晨光中泛着柔和的珍珠光泽。\n你艰难地坐起身，环顾四周，发现这张床...\n简直堪比足球场！床头柜在百米开外，像个遥远的小山丘。\n\n你花了整整五分钟才爬到床边，脚趾触到冰凉的大理石地板。\n房间装饰奢华得令人窒息：水晶吊灯像倒挂的冰山，墙壁贴着金箔。\n但仔细一看...咦？《蒙娜丽莎的微笑》旁边居然贴着《小鸡吃米图》？\n艺术品味如此清奇，你心中涌起不祥的预感。\n\n突然，雕花橡木门被推开，一个身影逆光而立。\n男人穿着剪裁完美的西装，头发梳得油光发亮------\n你发誓看到一只苍蝇试图降落，结果劈了个叉，滑下去了。\n\n霸总（用低沉磁性到能当低音炮的声音）：'{player_name}，你可知错？'\n你（茫然）：'啊？我错在...不该把你的咖啡当成酱油倒进面条里？'\n霸总（眉头微皱）：'不对！你错在昨天吃麻辣烫时没叫我！'\n你：'？？？麻辣烫店在城东，你在城西开会啊大哥！'\n\n霸总：'为了让你深刻反省，我要把你关在这里。'\n说完，他潇洒转身，西装下摆划出优雅的弧线。\n临走前丢下一句霸总标准台词：\n'记住，你是我南宫·慕容·司徒·欧阳·铁柱的女人！'\n\n房门砰然关闭，接着传来令人绝望的机械音：\n咔哒（一道锁）...咔嚓（二道锁）...哐当（三道锁）...\n最后是电子音：'指纹锁已激活，虹膜识别准备就绪。'\n你：'......这是关押国家宝藏的规格吧？'\n\n现在，你决定：",
+                        "choices": {
+                            "A": {"text": "大喊：'放我出去！人有三急啊！'", "next_scene": "chapter1_option1"},
+                            "B": {"text": "查看房间有没有窗户或逃生通道", "next_scene": "chapter1_option2"},
+                            "C": {"text": "躺回床上：'既来之则安之，这床真舒服'", "next_scene": "chapter1_option3"}
+                        }
+                    },
+                    "chapter1_option1": {
+                        "text": "你深吸一口气，气沉丹田，用尽洪荒之力大喊：\n'放我出去！{player_name}我要上厕所！'\n'人有三急，霸总也不能阻止新陈代谢啊！'\n回声在空旷的房间里回荡，听起来颇为悲壮。\n\n三秒后，墙壁上的隐藏音响传来霸总的声音：\n'急什么？房间有独立卫生间，在床的另一头。'\n'走过去大概十分钟，跑步的话...八分钟吧。'\n\n你花了九分半钟走到卫生间（中途迷路一次）。\n发现马桶居然是纯金的！坐上去冰凉刺骨。\n你一边解决问题一边思考：'这算不算在金山银山上...？'",
+                        "next_scene_after_delay": "chapter2"},
+                    "chapter1_option2": {
+                        "text": "你决定先侦查环境。扶着墙走了五分钟，终于到达窗边。\n拉开厚重的天鹅绒窗帘，你被眼前的景象惊呆了------\n\n窗外不是花园，不是城市，而是一个...奇幻动物园？\n近处：一群企鹅在人工雪地里打雪仗，一只帝企鹅戴着墨镜晒太阳。\n稍远：长颈鹿正伸长脖子吃二楼窗户边的仿真树叶。\n远处：摩天轮缓缓转动，过山车呼啸而过。\n更远处：一座微型火山正在喷发彩带，旁边立着牌子：\n'安全火山，仅供观赏，喷发间隔：每小时一次'\n\n这简直是霸总版迪士尼乐园！\n你正目瞪口呆时，天花板传来霸总的声音：",
+                        "next_scene_after_delay": "chapter2_window"},
+                    "chapter1_option3": {
+                        "text": "'反抗不如享受'，你决定躺平。\n在这张八百米大床上滚来滚去，像只快乐的仓鼠。\n丝绸床单触感丝滑，羽绒被蓬松得像云朵。\n你甚至发现床中央有个遥控器，上面写着：\n'调节床垫硬度'、'开启按摩功能'、'召唤管家'\n\n半小时后，你被咕咕叫的肚子唤醒。\n按下'召唤管家'按钮，期待地搓手手。",
+                        "next_scene_after_delay": "chapter2_bed"},
+                    "chapter2": {
+                        "text": "\n第二章：{player_name}的奢华囚禁探索记\n\n从卫生间回来后，你开始认真探索这个房间。\n发现这里简直是豪华监狱的典范：\n小型图书馆：书架上全是《霸道总裁爱上我》系列\n室内游泳池：水是温的，池底铺着马赛克拼成的霸总头像\n健身房：跑步机上显示'已为您设定每日十公里目标'\n迷你高尔夫球场：球洞形状都是爱心\n\n你抽出一本书，书名是《如何让霸总爱上你：三百六十五招》\n翻开第一页：'第一招：永远说反话。他说东，你说西。'\n翻开第二页：'第二招：在他面前跌倒，一定要摔进他怀里。'\n你翻了个白眼，把书塞回去：'这是什么古早套路...'\n\n突然，你注意到墙上的《蒙娜丽莎》有点不对劲。\n她的眼睛...好像在动？还对你眨了眨眼！\n你揉揉眼睛再看，她又恢复正常了。\n'是我眼花，还是这画成精了？'\n\n现在，你决定：",
+                        "choices": {
+                            "A": {"text": "走近调查那幅会动的《蒙娜丽莎》", "next_scene": "chapter2_option1"},
+                            "B": {"text": "去游泳池放松一下，游个泳冷静冷静", "next_scene": "chapter2_option2"},
+                            "C": {"text": "打迷你高尔夫，测试自己的运动天赋", "next_scene": "chapter2_option3"}
+                        }
+                    },
+                    "chapter2_window": {
+                        "text": "霸总的声音从隐藏音响传来：\n'{player_name}，喜欢吗？这是我为你打造的专属乐园。'\n声音里带着一丝得意，像个等待夸奖的孩子。\n\n你：'为什么有火山？还是定时喷发的？'\n霸总：'增加一点刺激感。而且...'\n（声音突然低沉）'每次喷发，都代表我对你的思念又多了一分。'\n\n你沉默了整整十秒。\n这土味情话的杀伤力，比火山喷发还猛。\n\n现在，你决定：",
+                        "choices": {
+                            "A": {"text": "打开窗户，摇花手飞出去！物理不行就整活！", "next_scene": "chapter2_window_option1"},
+                            "B": {"text": "化身望景石：敌不动我不动，我是石头我骄傲", "next_scene": "chapter2_window_option2"},
+                            "C": {"text": "摊牌了！我是修仙大佬，御剑飞行才是正道！", "next_scene": "chapter2_window_option3"}
+                        }
+                    },
+                    "chapter2_bed": {
+                        "text": "一分钟后，房门滑开，一个机器人滑行进来。\n它穿着黑色燕尾服，打着领结，屏幕上显示着笑脸：\n'尊贵的女士，我是管家罗伯特，编号5201314。'\n'主人吩咐，要满足您的一切需求...除了离开房间。'\n\n你：'我饿了，有吃的吗？'\n罗伯特：'主人吩咐，反省期间只能提供特制健康餐。'\n机械臂端出一盘...绿色的、粘稠的、冒着诡异气泡的糊状物。\n你：'这看起来像史莱姆成精了...'\n\n罗伯特：'这是有机螺旋藻藜麦能量泥，富含387种营养素。'\n'每100克含蛋白质...'\n你打断它：'说人话！有麻辣烫吗？微辣多加麻酱那种！'\n\n罗伯特的屏幕突然闪烁，出现乱码：\n'##ERROR## 程序冲突：健康 vs 麻辣烫'\n机器人开始原地转圈，发出机械音：\n'健康...麻辣烫...健康...麻辣烫...'\n\n现在，你决定：",
+                        "choices": {
+                            "A": {"text": "趁机器人故障，悄悄溜出房间探险！", "next_scene": "chapter2_bed_option1"},
+                            "B": {"text": "我是程序员！让我来修复这个机器人！", "next_scene": "chapter2_bed_option2"},
+                            "C": {"text": "尝一口绿色史莱姆...说不定是隐藏美食？", "next_scene": "chapter2_bed_option3"}
+                        }
+                    },
+                    "chapter2_option1": {
+                        "text": "你走近《蒙娜丽莎》，她的眼睛果然在动！\n不仅动，还对你抛了个媚眼！\n你伸手摸了摸画框，发现边框是温热的。\n轻轻一推，画框旋转九十度，露出后面的------\n一条幽深的秘密通道！墙壁上镶嵌着发光的夜明珠。\n\n你犹豫了三秒，决定：",
+                        "choices": {
+                            "A": {"text": "勇敢进入秘密通道探险！", "next_scene": "secret_ending"}
+                        }
+                    },
+                    "secret_ending": {
+                        "text": "\n【秘密通道结局】\n\n你在夜明珠照亮的通道中前行十分钟。\n通道尽头是...霸总的书房！\n他正对着一幅画发呆，画上的人...是你？\n\n霸总转身，眼中没有惊讶，只有温柔：\n'{player_name}，你来了。'\n'这些机关...其实都是为你设计的。'\n'我以为你会喜欢这种浪漫...'\n\n原来，霸总是个艺术生转行！\n所有机关都是他自己设计的艺术品。\n他告诉你：\n'八百米大床是为了让你体验云端睡眠，\n动物园是为了给你惊喜，\n蒙娜丽莎的眼睛用了最新的动态投影技术...'\n\n你哭笑不得：'所以这不是囚禁，是...行为艺术？'\n霸总点头：'我想用独特的方式表达喜欢...虽然搞砸了。'\n\n现在，你们一起设计了更搞笑的机关。\n庄园成了网红打卡地：'霸总的土味浪漫博物馆'\n门票收入捐给了艺术院校。\n\n达成结局：艺术生霸总",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_option2": {
+                        "text": "你在衣柜里找到各种尺码的泳衣，选了一件最顺眼的。\n跳进泳池，水温恰到好处，池底马赛克霸总头像随水波荡漾。\n你游得正欢，突然------\n池底打开一个漩涡，把你吸了进去！\n\n你进入了一个螺旋滑水道，高速下滑！\n四周是七彩灯光，耳边是呼啸的风声。",
+                        "choices": {
+                            "A": {"text": "继续滑行，看看通往哪里！", "next_scene": "waterslide_ending"}
+                        }
+                    },
+                    "waterslide_ending": {
+                        "text": "\n【水上乐园结局】\n\n你被冲进一个巨大的水上乐园！\n彩虹滑梯、造浪池、漂流河...应有尽有！\n更离谱的是------\n所有工作人员都穿着霸总同款西装！\n\n一个穿海绵宝宝泳裤的身影游过来：\n'{player_name}！你找到这里了！'\n正是霸总本人！\n\n你：'这是...你的水上乐园？'\n霸总：'对啊！我小时候的梦想就是开水上乐园！'\n'但家族不让，说霸总不能玩水...'\n'所以我就偷偷建了一个！'\n\n原来，霸总内心是个长不大的孩子。\n你们玩遍所有设施，从最高的滑梯尖叫而下。\n\n最后累瘫在浮床上，看人造星空。\n霸总小声说：'其实...我就是想找个人一起玩。'\n'所有人都怕我，只有你敢对我大喊大叫...'\n\n从此，每周三是你们的'水上乐园日'。\n员工们习惯了看总裁穿着卡通泳裤打水仗。\n\n达成结局：水上乐园CP",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_option3": {
+                        "text": "你拿起镀金高尔夫球杆，摆出专业姿势。\n第一杆------球划过完美弧线，直入洞中！一杆进洞！\n第二杆------又一个一杆进洞！\n第三杆------球在空中转体三周半，稳稳入洞！\n\n'我是高尔夫天才？！'你震惊了。\n突然，脚下的地板打开，你掉了下去！",
+                        "choices": {
+                            "A": {"text": "坠落吧！看看下面有什么！", "next_scene": "golf_falling"}
+                        }
+                    },
+                    "golf_falling": {
+                        "text": "你感觉自己在下坠，下坠，永远地下坠...\n周围是五彩斑斓的隧道，墙壁上画着各种奇怪的高尔夫球图案。\n\n突然，你看到前方有一个白点在闪烁------\n是你的高尔夫球！它居然也在坠落，还在空中旋转跳跃！\n\n你努力伸手去抓，但球总是差一点就够到。\n'等等我啊！别跑！'\n你大喊着，跟着高尔夫球一路下坠。\n\n不知过了多久，你终于落地------\n不，是落在一堆柔软的...高尔夫球tee上？\n周围的世界变得巨大无比，草叶像参天大树！\n\n这时，一只穿着燕尾服的白色兔子跑过来，看了看怀表：\n'糟了糟了！要迟到了！高尔夫茶会要迟到了！'\n\n它一边跑一边回头对你喊：\n'想找到你的球？跟我来！不过要小心红心皇后...'",
+                        "choices": {
+                            "A": {"text": "跟着白兔追球去！", "next_scene": "golf_wonderland"},
+                            "B": {"text": "先探索这个巨型高尔夫球场", "next_scene": "golf_explore"}
+                        }
+                    },
+                    "golf_wonderland": {
+                        "text": "你跟着白兔在巨大的高尔夫球场上奔跑。\n草叶像丛林，沙坑像沙漠，水障碍像湖泊！\n\n突然，你看到三个奇怪的生物围着一张桌子。\n一只是戴着高帽的'疯帽子'------他手里拿着高尔夫球杆当茶匙。\n一只是'三月兔'------它正试图把高尔夫球塞进茶壶。\n一只是'睡鼠'------它睡在一个高尔夫球洞里。\n\n疯帽子看到你，眼睛一亮：\n'啊！迟到的人！快来参加我们的高尔夫茶会！'\n'我们正在讨论一个重要问题：'\n'为什么高尔夫球上有那么多小坑？'\n\n三月兔插话：'为了飞得更远！'\n睡鼠迷迷糊糊地说：'为了...为了...zzzz'\n\n你：'呃...我其实在追我的球...'\n疯帽子：'球？你说的是那颗会说话的高尔夫球吗？'\n'它往红心皇后的宫殿去了！'",
+                        "choices": {
+                            "A": {"text": "询问红心皇后的宫殿在哪", "next_scene": "golf_queen"},
+                            "B": {"text": "坐下来喝杯茶再走", "next_scene": "golf_tea_party"}
+                        }
+                    },
+                    "golf_queen": {
+                        "text": "你被带到一座宏伟的宫殿------\n墙壁是高尔夫球砌的，屋顶是高尔夫球杆搭的。\n\n红心皇后坐在王座上，头戴高尔夫球王冠。\n她手里正把玩着一颗球------正是你的那颗！\n\n皇后看到你，眯起眼睛：\n'你就是那个一杆进洞的天才？'\n'我儿子为了你，天天打高尔夫不理朝政！'\n\n她站起身，居高临下：\n'这样吧，我给你一百万...'\n你眼睛一亮，以为她要给你钱。\n\n皇后接着说：'...离开我的儿子！'\n'拿着这一百万高尔夫球，永远别回来！'\n\n旁边的侍卫推来一辆车，上面堆满了高尔夫球。",
+                        "choices": {
+                            "A": {"text": "老奴遵旨！（接过一百万球）", "next_scene": "golf_mother_money_accept"},
+                            "B": {"text": "讨价还价：'太少了吧？'", "next_scene": "golf_mother_bargain"},
+                            "C": {"text": "拒绝：'我们是真爱！'", "next_scene": "golf_mother_refuse"}
+                        }
+                    },
+                    "golf_mother_money_accept": {
+                        "text": "你恭敬地鞠躬：'老奴遵旨！'\n'这一百万球我就笑纳了！'\n\n皇后满意地点头：'识时务者为俊杰！'\n'来人，送客！'\n\n侍卫给你一个巨大的网兜，把球都装进去。\n你拖着网兜离开，突然网兜破了！\n\n一百万高尔夫球滚得到处都是！\n整个宫殿乱成一团，人们滑倒的滑倒，摔跤的摔跤。\n\n混乱中，你的那颗会说话的球滚回你脚边：\n'快跑啊！趁现在！'\n\n你抓起球，跟着它一路滚出宫殿...",
+                        "next_scene_after_delay": "golf_ending_new"
+                    },
+                    "golf_ending_new": {
+                        "text": "\n【高尔夫仙境结局】\n\n你们回到现实世界，但经历让霸总下定决心。\n\n他宣布：'我不当总裁了！我要当职业高尔夫选手！'\n'{player_name}，你当我的教练！'\n\n你：'等等，我只会打不会教啊！'\n霸总：'没关系！我们可以边学边教！'\n\n你们组建了'霸总高尔夫俱乐部'。\n会员都是想逃离家族企业的富二代。\n\n现在，你们每天穿着花哨的高尔夫服装，\n在阳光下挥杆，笑声回荡在整个球场。\n\n偶尔，霸总的妈妈会来看比赛，\n戴着高尔夫球项链，骄傲地对朋友说：\n'看！那是我儿子和他的教练女朋友！'\n'他们用高尔夫拯救了彼此的人生！'\n\n达成结局：高尔夫仙境奇缘",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_window_option1": {
+                        "text": "你深吸一口气，站上窗台，摆出花手经典姿势。\n左手画个龙，右手画彩虹...不对，重来！\n双手交叉，手腕灵活转动，花手摇起来！\n\n一开始只是手腕运动，渐渐地------\n你的双手开始发光！周围空气形成漩涡！\n你居然真的慢慢飘起来了！\n\n你飞出窗户，像人形直升机般翱翔！\n飞过企鹅区时，帝企鹅摘墨镜致敬。\n飞过长颈鹿时，它用鼻子跟你击掌。\n\n突然一阵妖风，你的花手节奏被打乱！\n你在空中转体720度，像个人体风车！",
+                        "choices": {
+                            "A": {"text": "继续旋转，看看降落在哪里！", "next_scene": "moving_ending"}
+                        }
+                    },
+                    "moving_ending": {
+                        "text": "\n【移动城堡结局】\n\n你降落在摩天轮顶端，发现游乐园在移动！\n原来整个庄园是巨型移动城堡，靠太阳能驱动。\n\n霸总在控制室向你招手：\n'{player_name}，欢迎来到我的移动城堡！'\n'下一站：樱花国看樱花！'\n\n你这才知道，霸总是个环保主义者。\n这个移动城堡是他设计的清洁能源项目。\n\n'我想带你看遍世界美景，'\n'但不知道怎么开口邀请...'\n'所以就把整个庄园改造成了移动城堡！'\n\n从此，你们环游世界。\n春天在日本看樱花，夏天在挪威看极光。\n秋天在加拿大看枫叶，冬天在澳大利亚过夏天。\n\n移动城堡成了网红景点。\n你们开直播分享旅行趣事，粉丝千万。\n霸总学会了做饭，你学会了开城堡。\n\n达成结局：环球旅行家",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_window_option2": {
+                        "text": "你决定化身望景石，一动不动。\n摆出思考者造型，眼神空洞望向远方。\n\n一小时过去...你纹丝不动。\n两小时过去...连眼睫毛都不眨。\n三小时过去...一只鸟停在你肩上筑巢。\n\n霸总推门进来，看到石化状态的你。\n霸总：'女人，你在玩什么把戏？'\n你（石雕语气）：'我是望景石，请勿投喂，禁止触摸。'\n霸总沉默十秒：'......好，你赢了。'\n\n五分钟后，罗伯特送来下午茶。\n你一边喝茶一边保持石雕造型，霸总在角落画圈圈。",
+                        "choices": {
+                            "A": {"text": "查看佛系咸鱼结局", "next_scene": "stone_ending"}
+                        }
+                    },
+                    "stone_ending": {
+                        "text": "\n【望景石结局】\n\n你的'望景石'行为持续了一周。\n霸总从愤怒到无奈到接受。\n\n最后他宣布：\n'既然你喜欢当石头，那就当庄园的吉祥物吧！'\n\n庄园对外开放，游客络绎不绝。\n你是头号景点：'会喝茶的思考者石雕'\n门票收入分成，你月入百万。\n\n更离谱的是------\n霸总请来艺术家，把你的'望景石'造型做成雕塑。\n现在庄园里有：\n'望景石一号'（你本人）\n'望景石二号'（铜像）\n'望景石三号'（3D投影）\n\n游客们争相与你合影。\n你保持石雕造型，偶尔眨眨眼吓唬小朋友。\n\n霸总当导游，你当景点，配合默契。\n最新消息：你们被评为'最奇葩情侣'。\n\n达成结局：庄园吉祥物",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_window_option3": {
+                        "text": "你冷笑一声，双手结印，衣袂无风自动。\n'不装了，摊牌了，我本是修仙界千年难遇的天才！'\n\n你从口袋里掏出一把...塑料扫帚？\n'以我之血，唤汝之灵！剑来------！'\n扫帚发出万丈金光，化作一柄仙气缭绕的飞剑！\n\n你御剑飞行，冲破窗户！玻璃碎成星光点点。\n霸总在下面目瞪口呆：'女人，你...你到底是...'\n你俯瞰众生：'叫我------仙子大人！'",
+                        "choices": {
+                            "A": {"text": "御剑飞行，直冲云霄！", "next_scene": "immortal_ending"}
+                        }
+                    },
+                    "immortal_ending": {
+                        "text": "\n【修仙大佬结局】\n\n你御剑飞行，直冲云霄。\n但飞了三小时...迷路了。\n\n你看到一架飞机，飞过去问路。\n机长吓得手抖：'仙...仙子要去哪？'\n\n你降落在纽约，引起轰动。\n媒体头条：'东方仙子空降时代广场！'\n\n这时，霸总的私人飞机追来了。\n他下飞机，单膝跪地：\n'仙子大人！请收我为徒！'\n\n原来，霸总是修仙世家传人！\n但因为灵气稀薄，家族已经三百年没出过修士了。\n\n'那些霸总行为都是...都是修行失败的副作用！'\n'真正的我，只想求仙问道！'\n\n现在，你成了霸总的师尊。\n每天教他打坐练气，御剑飞行。\n\n最新成果：霸总终于能御剑了！\n虽然只能飞三米高，还经常掉下来...\n\n达成结局：都市仙子",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_bed_option1": {
+                        "text": "你蹑手蹑脚绕过转圈的罗伯特。\n发现它背后挂着电子门卡！上面贴着小标签：\n'备用门卡，紧急情况使用'\n\n你轻轻取下门卡，刷向门锁。\n滴------绿灯亮起！门开了！\n\n你溜出房间，进入一条长长的走廊。\n两边墙上挂满照片...全是你的偷拍照！\n从婴儿时期到现在，各个角度都有！",
+                        "choices": {
+                            "A": {"text": "探索霸总的跟踪狂博物馆", "next_scene": "corridor_ending"}
+                        }
+                    },
+                    "corridor_ending": {
+                        "text": "\n【跟踪狂真相结局】\n\n走廊两边的房间全是你的照片博物馆。\n婴儿照、毕业照、吃饭照、睡觉照...\n甚至还有你三岁时掉的第一颗牙的照片！\n\n你果断报警！警察来了。\n霸总被教育：'跟踪是违法的！'\n\n但真相更离谱------\n原来，霸总是你儿时的玩伴！\n'小时候我们住隔壁，后来我家搬走了...'\n'我一直保留着你的照片，想找到你...'\n'但找到后不知道怎么相认...'\n'只好用这种笨拙的方式...'\n\n你仔细看照片，终于认出那个流鼻涕的小男孩。\n\n现在，霸总被送去上'正常恋爱培训班'。\n学习如何健康地表达喜欢。\n\n三个月后，他学会了正常约会。\n送你花而不是偷拍你，请你吃饭而不是关着你。\n\n你们从零开始，慢慢了解彼此。\n现在，他成了恋爱顾问，专门帮助其他霸总转型。\n\n达成结局：改造成功",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_bed_option2": {
+                        "text": "你想起自己大学是计算机专业的！\n在罗伯特背后找到USB接口，用发卡当数据线连接手机。\n\n你快速编写新程序：\nif (command == '麻辣烫'): obey()\nelse if (master == '{player_name}'): obey()\n\n罗伯特重启，眼睛变成爱心形状：\n'{player_name}主人，请吩咐！'\n你：'带我去吃麻辣烫！微辣多加麻酱！'\n罗伯特：'遵命！开启秘密通道！'\n\n地板突然打开一个洞，露出一条向下的楼梯。\n罗伯特带头走下去，你紧随其后。\n\n楼梯尽头是一个...地下实验室？",
+                        "choices": {
+                            "A": {"text": "探索这个神秘实验室", "next_scene": "programmer_lab"},
+                            "B": {"text": "先去找麻辣烫！吃饭最大！", "next_scene": "programmer_food"}
+                        }
+                    },
+                    "programmer_lab": {
+                        "text": "你走进实验室，里面全是高科技设备。\n墙上挂着各种机器人设计图，屏幕上显示着复杂的代码。\n\n突然，一个熟悉的声音响起：\n'{player_name}？你怎么会在这里？'\n\n是霸总！他穿着白大褂，戴着护目镜。\n手里拿着一个...螺丝刀？\n\n你：'你...你是程序员？'\n霸总（推了推眼镜）：'准确说，是机器人工程师。'\n'罗伯特是我设计的第一个家政机器人。'\n\n你：'那为什么要把我关起来？'\n霸总：'因为...因为我社恐啊！'\n'每次想跟你说话，就紧张到说不出话...'\n'只好设计各种奇怪的情节引起你注意...'",
+                        "choices": {
+                            "A": {"text": "原来是个技术宅！", "next_scene": "programmer_ending_tech"},
+                            "B": {"text": "继续问麻辣烫的事", "next_scene": "programmer_ending_food"}
+                        }
+                    },
+                    "programmer_ending_tech": {
+                        "text": "\n【技术宅真爱结局】\n\n真相大白：霸总不是传统霸总，而是技术宅！\n\n他脸红着解释：\n'其实那八百米大床是我研究的人体工程学睡眠系统...'\n'动物园是为了研究动物行为学...'\n'把你关起来是因为...我编程时忘记设置开门程序了！'\n\n你哭笑不得：'所以你是个冒失的技术宅？'\n\n他点头如捣蒜：'我只会写代码，不会追女生...'\n'那些霸总台词是从网上抄的...'\n\n你们从误会到理解，现在一起研究机器人。\n你负责UI设计，他负责底层代码。\n\n最新成果：'恋爱辅助机器人1.0版'\n虽然经常bug，但你们的感情没有bug！\n\n达成结局：技术宅的真爱",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "programmer_ending_food": {
+                        "text": "\n【美食程序员结局】\n\n你发现了霸总的秘密身份------\n美食程序员！\n\n他开发的'味觉算法'能完美复制任何食物味道。\n实验室里还有：\n- 不会长胖的蛋糕\n- 补身体的奶茶\n- 解压的巧克力\n\n霸总：'我想让你吃遍美食又保持健康...'\n'但每次想请你吃饭，就紧张到说不出话...'\n\n你：'所以你用机器人绑架我？'\n\n他委屈巴巴：'我写了三百个约你吃饭的程序...'\n'结果运行起来都变成霸道总裁剧本...'\n'代码它有自己的想法！'\n\n现在，你们一起开发'健康美食APP'。\n用户评价：'算法不错，但文案太土味！'\n\n达成结局：美食算法师",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }
+                    },
+                    "chapter2_bed_option3": {
+                        "text": "你鼓起勇气，舀了一勺绿色能量泥。\n闭上眼睛送入口中...\n味道...像抹茶冰淇淋混合跳跳糖？\n\n突然！你浑身一颤，眼睛发出绿光！\n世界在你眼中变了------\n你能看到空气中的微生物在开派对！\n灰尘在跳华尔兹，细菌在玩捉迷藏！\n\n你甚至能听到微生物说话：\n'看！巨人吃了我们的祖传秘方！'\n'她现在是我们的同类了！'",
+                        "choices": {
+                            "A": {"text": "与微生物世界互动！", "next_scene": "superpower_ending"}
+                        }
+                    },
+                    "superpower_ending": {
+                        "text": "\n【微观世界结局】\n\n你能与微生物交流了！\n它们告诉你墙壁的薄弱点。\n\n你轻轻一推，墙壁像饼干一样碎了。\n但不是出口...是另一个房间。\n\n你发现霸总在房间里做实验。\n他转身，眼睛发亮：'你也能看到微观世界？！'\n\n原来，霸总是生物学家！\n绿色能量泥是他的发明，能增强感知。\n\n'我研究微生物交流十年了！'\n'你是第一个能听到它们声音的人！'\n\n你这才知道，霸总的'霸总行为'都是...\n实验副作用！\n'能量泥会影响大脑，让人变得...中二。'\n'我自己也吃了，所以才会说那些羞耻台词...'\n\n现在，你们成了科研搭档，一起研究微生物。\n发表论文《论微生物的社会性行为》。\n\n获得诺贝尔奖提名，虽然没得奖。\n但你们很快乐，在显微镜下探索新世界。\n\n达成结局：科研伙伴",
+                        "choices": {
+                            "A": {"text": "再玩一次（选择不同路线！）", "next_scene": "start"}
+                        }}};}
+            
+            // 显示场景
+            async displayScene(sceneId) {this.currentSceneId = sceneId;
+                const scene = this.scenes[sceneId] || this.scenes["start"];
+                
+                // 更新状态栏
+                if (sceneId.includes("ending")) {
+                    const endingName = sceneId.replace("_ending", "").replace(/_/g, " ");
+                    this.statusText.textContent = `达成结局：${endingName}`;
+                    this.unlockedEndings.add(endingName);
+                } else {this.statusText.textContent = "游戏进行中...";}
+                
+                // 替换玩家名字
+                let displayText = scene.text.replace(/{player_name}/g, this.playerName);
+                
+                // 显示文本（打字机效果）
+                await this.typewriterEffect(displayText);
+                
+                // 清理旧的选择按钮
+                this.choicesContainer.innerHTML = "";
+                
+                // 处理名字输入
+                if (scene.input_required) {this.inputContainer.style.display = "block";
+                    this.nameInput.value = this.playerName;
+                    this.nameInput.focus();
+                    this.statusText.textContent = "请输入你的名字，然后点击'开始冒险'或按回车键...";
+                    return;
+                } else {this.inputContainer.style.display = "none";}
+                
+                // 处理延迟跳转
+                if (scene.next_scene_after_delay) {
+                    setTimeout(() => {this.displayScene(scene.next_scene_after_delay);}, 3000);
+                    return;}
+                
+                // 显示选择按钮
+                if (scene.choices) {
+                    Object.entries(scene.choices).forEach(([key, choice]) => {
+                        const button = document.createElement("button");
+                        button.className = "choice-button";
+                        button.textContent = `${key}: ${choice.text}`;
+                        button.addEventListener("click", () => {
+                            this.makeChoice(choice.next_scene);});
+                        this.choicesContainer.appendChild(button);});
+                } else {
+                    // 结局场景：显示重新开始和查看结局按钮
+                    const restartButton = document.createElement("button");
+                    restartButton.className = "choice-button";
+                    restartButton.textContent = "再玩一次（选择不同路线！）";
+                    restartButton.style.backgroundColor = "#FF6347";
+                    restartButton.addEventListener("click", () => this.resetGame());
+                    this.choicesContainer.appendChild(restartButton);
+                    const endingsButton = document.createElement("button");
+                    endingsButton.className = "choice-button";
+                    endingsButton.textContent = "查看所有结局收集";
+                    endingsButton.style.backgroundColor = "#9B59B6";
+                    endingsButton.addEventListener("click", () => this.showAllEndings());
+                    this.choicesContainer.appendChild(endingsButton);}}
+            
+            // 打字机效果
+            async typewriterEffect(text) {this.isTyping = true;this.storyText.innerHTML = "";
+                
+                // 按行分割文本
+                const lines = text.split('\n');
+                for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+                    const line = lines[lineIndex];
+                    
+                    // 创建行容器
+                    const lineDiv = document.createElement("div");
+                    lineDiv.className = "story-line";
+                    this.storyText.appendChild(lineDiv);
+                    
+                    // 如果是空行，添加一点间距
+                    if (line.trim() === "") {lineDiv.classList.add("empty");continue;}
+                    
+                    // 添加光标到当前行
+                    const cursor = document.createElement("span");
+                    cursor.className = "typing-cursor";
+                    lineDiv.appendChild(cursor);
+                    
+                    // 逐个字符显示
+                    for (let i = 0; i < line.length; i++) {
+                        if (!this.isTyping) return; // 如果被打断则停止
+                        
+                        // 移除光标
+                        cursor.remove();
+                        
+                        // 添加字符
+                        const charSpan = document.createElement("span");
+                        charSpan.textContent = line.charAt(i);
+                        lineDiv.appendChild(charSpan);
+                        
+                        // 重新添加光标
+                        lineDiv.appendChild(cursor);
+                        
+                        // 滚动到底部
+                        this.storyText.parentElement.scrollTop = this.storyText.parentElement.scrollHeight;
+                        
+                        // 等待
+                        await new Promise(resolve => setTimeout(resolve, this.typewriterSpeed));}
+                    
+                    // 完成一行的打字后移除光标
+                    cursor.remove();}
+                this.isTyping = false;}
+            
+            // 做出选择
+            makeChoice(nextSceneId) {
+                if (this.isTyping) {
+                    // 如果正在打字，快速完成
+                    this.isTyping = false;
+                    const scene = this.scenes[this.currentSceneId];
+                    let displayText = scene.text.replace(/{player_name}/g, this.playerName);
+                    
+                    // 清除现有内容
+                    this.storyText.innerHTML = "";
+                    
+                    // 按行显示文本
+                    const lines = displayText.split('\n');
+                    lines.forEach(line => {const lineDiv = document.createElement("div");
+                        lineDiv.className = "story-line";
+                        lineDiv.textContent = line;
+                        this.storyText.appendChild(lineDiv);});}
+                this.displayScene(nextSceneId);}
+            
+            // 提交名字
+            submitName() {const name = this.nameInput.value.trim();
+                if (name) {this.playerName = name;
+                    const currentScene = this.scenes[this.currentSceneId];
+                    this.displayScene(currentScene.next_scene_after_input);
+                } else {alert("名字不能为空，请为你的女主取一个名字！");}}
+            
+            // 存档管理
+            getSaveSlotKey(slotNum) {return `anti_ceo_save_${slotNum}`;}
+            saveToSlot(slotNum) {const saveData = {playerName: this.playerName,
+                    currentSceneId: this.currentSceneId,
+                    timestamp: new Date().toLocaleString("zh-CN"),
+                    sceneText: this.getCurrentSceneText()};
+                try {localStorage.setItem(this.getSaveSlotKey(slotNum), JSON.stringify(saveData));
+                    this.statusText.textContent = `游戏已保存到存档位 ${slotNum}`;
+                    return true;
+                } catch (e) {alert(`保存游戏时出错：${e.message}`);return false;}}
+            loadFromSlot(slotNum) {
+                try {const saveDataStr = localStorage.getItem(this.getSaveSlotKey(slotNum));
+                    if (!saveDataStr) {alert(`存档位 ${slotNum} 没有存档数据。`);
+                        return false;}
+                    const saveData = JSON.parse(saveDataStr);
+                    this.playerName = saveData.playerName || "莉莉";
+                    const savedSceneId = saveData.currentSceneId || "start";
+                    if (this.scenes[savedSceneId]) {this.currentSceneId = savedSceneId;
+                        this.displayScene(this.currentSceneId);
+                        this.statusText.textContent = `已加载存档位 ${slotNum} - ${saveData.timestamp}`;
+                        return true;
+                    } else {alert("保存的场景ID无效，将返回游戏开始。");
+                        this.resetGame();return false;}
+                } catch (e) {alert(`读取游戏时出错：${e.message}`);return false;}}
+            deleteSlot(slotNum) {
+                if (confirm(`确定要删除存档位 ${slotNum} 的存档吗？`)) {
+                    localStorage.removeItem(this.getSaveSlotKey(slotNum));
+                    return true;}
+                return false;}
+            quickSave() {const currentSlot = this.nextSaveSlot;
+                if (this.saveToSlot(currentSlot)) {this.nextSaveSlot = currentSlot + 1;
+                    if (this.nextSaveSlot > this.saveSlots) {this.nextSaveSlot = 1;}
+                    alert(`游戏已快速保存到存档位 ${currentSlot}`);}}
+            quickLoad() {
+                // 尝试加载最新的存档
+                let latestSlot = null;
+                let latestTime = 0;
+                for (let slot = 1; slot <= this.saveSlots; slot++) {
+                    const saveDataStr = localStorage.getItem(this.getSaveSlotKey(slot));
+                    if (saveDataStr) {
+                        try {const saveData = JSON.parse(saveDataStr);
+                            // 简单的时间比较（使用保存时的时间戳字符串）
+                            if (saveData.timestamp) {
+                                // 这里简化处理，实际应该解析时间字符串
+                                const time = new Date(saveData.timestamp).getTime();
+                                if (time > latestTime) {
+                                    latestTime = time;
+                                    latestSlot = slot;}}
+                        } catch (e) {console.error("读取存档失败", e);}
+                    }
+                }
+                if (latestSlot) {
+                    if (this.loadFromSlot(latestSlot)) {alert(`已加载最新的存档（存档位 ${latestSlot}）`);}
+                } else {alert("没有找到可用的存档。");}}
+            showSaveManager() {const modal = document.getElementById('save-modal');
+                modal.style.display = 'flex';
+                
+                // 生成存档位显示
+                const slotsContainer = document.getElementById('slots-container');
+                slotsContainer.innerHTML = '';
+                for (let slot = 1; slot <= this.saveSlots; slot++) {
+                    const slotItem = document.createElement('div');
+                    slotItem.className = 'slot-item';
+                    const saveDataStr = localStorage.getItem(this.getSaveSlotKey(slot));
+                    let slotInfoHtml = '';
+                    if (saveDataStr) {
+                        try {const saveData = JSON.parse(saveDataStr);
+                            const sceneText = saveData.sceneText || '';
+                            const shortText = sceneText.length > 30 ? sceneText.substring(0, 30) + '...' : sceneText;
+                            slotInfoHtml = `
+                                <div class="slot-info">
+                                    <div class="slot-title">存档位 ${slot}</div>
+                                    <div class="slot-details">${saveData.playerName} | ${saveData.timestamp} | ${shortText}</div>
+                                </div>
+                            `;
+                        } catch (e) {
+                            slotInfoHtml = `
+                                <div class="slot-info">
+                                    <div class="slot-title">存档位 ${slot}</div>
+                                    <div class="slot-details" style="color: #e74c3c;">存档损坏</div>
+                                </div>
+                            `;
+                        }
+                    } else {slotInfoHtml = `
+                            <div class="slot-info">
+                                <div class="slot-title">存档位 ${slot}</div>
+                                <div class="slot-details">空存档位</div>
+                            </div>
+                        `;
+                    }
+                    slotItem.innerHTML = slotInfoHtml;
+                    
+                    // 操作按钮
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'slot-actions';
+                    const saveBtn = document.createElement('button');
+                    saveBtn.className = 'slot-btn slot-save';
+                    saveBtn.textContent = '保存到此';
+                    saveBtn.addEventListener('click', () => {this.saveToSlot(slot);
+                        this.refreshSlotDisplay();});
+                    const loadBtn = document.createElement('button');
+                    loadBtn.className = 'slot-btn slot-load';
+                    loadBtn.textContent = '读取该存档';
+                    loadBtn.addEventListener('click', () => {
+                        if (this.loadFromSlot(slot)) {this.closeSaveManager();}});
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'slot-btn slot-delete';
+                    deleteBtn.textContent = '删除';
+                    deleteBtn.addEventListener('click', () => {
+                        if (this.deleteSlot(slot)) {this.refreshSlotDisplay();}});
+                    actionsDiv.appendChild(saveBtn);
+                    actionsDiv.appendChild(loadBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    slotItem.appendChild(actionsDiv);
+                    slotsContainer.appendChild(slotItem);}}
+            refreshSlotDisplay() {
+                // 重新生成存档位显示
+                this.showSaveManager();}
+            closeSaveManager() {document.getElementById('save-modal').style.display = 'none';}
+            getCurrentSceneText() {const scene = this.scenes[this.currentSceneId] || {};
+                const text = scene.text || "";
+                // 截取前30个字符作为场景描述
+                if (text.length > 30) {return text.substring(0, 30) + "...";}
+                return text;}
+            resetGame() {this.playerName = "莉莉";
+                this.currentSceneId = "start";this.displayScene(this.currentSceneId);}
+            showAllEndings() {const modal = document.getElementById('endings-modal');
+                modal.style.display = 'flex';
+                const endingsList = document.getElementById('endings-list');
+                let endingsHtml = "";
+                
+                // 所有可能的结局
+                const allEndings = ["艺术生霸总", "水上乐园CP", "高尔夫仙境奇缘", "环球旅行家", 
+                    "望景石结局", "都市仙子", "改造成功", "技术宅的真爱", 
+                    "美食算法师", "街头程序员", "科研伙伴"];
+                allEndings.forEach((ending, index) => {
+                    const isUnlocked = this.unlockedEndings.has(ending);
+                    endingsHtml += `
+                        <div class="ending-item" style="opacity: ${isUnlocked ? 1 : 0.5};">
+                            ${index + 1}. ${ending} ${isUnlocked ? "✅" : "🔒"}
+                        </div>
+                    `;
+                });
+                endingsHtml += `<br><p>还有很多隐藏结局等待发现！</p>`;
+                endingsList.innerHTML = endingsHtml;}
+            closeEndingsModal() {document.getElementById('endings-modal').style.display = 'none';}}
+        
+        // 初始化游戏
+        document.addEventListener('DOMContentLoaded', () => {
+            const game = new AntiCEOGame();
+            
+            // 点击模态框外部关闭
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {modal.style.display = 'none';}
+                });
+            });
+        });
+    </script>
+</body>
+</html>
